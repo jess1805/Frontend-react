@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, FlatList, ActivityIndicator, SafeAreaView, Text
 import { useFocusEffect, Stack  } from 'expo-router'; 
 import { AntDesign } from '@expo/vector-icons'; 
 
-// Backend URL
 const API_URL = 'http://localhost:5050/api/users';
 
 interface User {
@@ -18,7 +17,7 @@ export default function UserListScreen() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  //1. Fetch Users
+  // Fetch Users
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -39,7 +38,7 @@ export default function UserListScreen() {
     }
   };
 
- // 2. Delete User
+ // Delete User
   const handleDelete = async (userId: string) => {
     
     // The actual logic to send the DELETE request
@@ -76,20 +75,20 @@ export default function UserListScreen() {
     }
   };
 
-  // 3. Reload data when screen opens
+  // Reload data when screen opens
   useFocusEffect(
     useCallback(() => {
       fetchUsers();
     }, [])
   );
 
-  // 4. Search Filter
+  // Search Filter
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // 5. Render Individual Card
+  // Render Individual Card
   const renderItem = ({ item }: { item: User }) => (
     <View style={styles.card}>
       <View style={styles.cardContent}>

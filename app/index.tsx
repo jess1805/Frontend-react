@@ -1,67 +1,73 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, SafeAreaView, Platform } from 'react-native';
-import { useRouter, Stack } from 'expo-router'; 
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  SafeAreaView,
+} from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 
 export default function AddUserScreen() {
   const router = useRouter();
-  
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const handleSubmit = async () => {
-    // 1. Basic Empty Check (Frontend)
+    // basic frontend validation
     if (!name || !email || !phone) {
-      alert("Error: Please fill in all fields");
+      setError('Please fill in all fields');
       return;
     }
 
     setLoading(true);
+    setError('');
+    setSuccess('');
 
     try {
-      const userData = { 
-        name: name, 
-        email: email, 
-        phone_number: phone 
+      const userData = {
+        name,
+        email,
+        phone_number: phone,
       };
 
-      // 2. Send Request to Backend
-      // Using localhost since you are testing on Web
       const response = await fetch('http://localhost:5050/api/users/add', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
 
-      // 3. Handle Response
-      const data = await response.json(); // Read the JSON response from backend
+      const data = await response.json();
 
       if (response.ok) {
-        // SUCCESS
-        alert("Success: " + (data.message || "User added!"));
-        setName(''); setEmail(''); setPhone(''); // Clear form
+        setSuccess(data.message || 'User added successfully');
+        setName('');
+        setEmail('');
+        setPhone('');
+      } else {    
+        const message = data.message;
+
+        if (typeof message === 'string') {
+          const cleanedMessage = message.split(':').pop()?.trim();
+          setError(cleanedMessage || 'Failed to add user');
+          } else if (typeof message === 'object' && message !== null) {
+          // handles cases like { phone_number: "Invalid phone number" }
+        const firstError = Object.values(message)[0];
+          setError(String(firstError));
       } else {
-        // ERROR (Validation failed, Duplicate user, etc.)
-        
-        // Your ApiError usually sends the message in 'message' or just inside the body
-        // We check multiple places to be safe
-        let errorMessage = "Failed to add user.";
-        
-        if (data.message) {
-          errorMessage = data.message;
-        } else if (typeof data === 'string') {
-          errorMessage = data;
+      setError('Failed to add user');
         }
-
-        // SHOW THE ALERT ON WEB
-        alert("Error: " + errorMessage);
-        console.log("Backend Error Details:", data); // Check Console (F12) if alert is vague
       }
-
-    } catch (error) {
-      console.error(error);
-      alert("Network Error: Is the backend server running?");
+    } catch (err) {
+      // this usually means server is down or unreachable
+      setError('Server not reachable. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -69,38 +75,48 @@ export default function AddUserScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: 'Home Screen' }} /> 
+      <Stack.Screen options={{ title: 'Home Screen' }} />
 
       <View style={styles.content}>
         <Text style={styles.title}>Add User</Text>
 
         <Text style={styles.label}>Name</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Enter Name" 
-          value={name} 
-          onChangeText={setName} 
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Name"
+          value={name}
+          onChangeText={setName}
         />
 
         <Text style={styles.label}>Email</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Enter Email" 
-          value={email} 
-          onChangeText={setEmail} 
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Email"
+          value={email}
+          onChangeText={setEmail}
           autoCapitalize="none"
         />
 
         <Text style={styles.label}>Phone</Text>
-        <TextInput 
-          style={styles.input} 
-          placeholder="Enter Phone" 
-          value={phone} 
-          onChangeText={setPhone} 
+        <TextInput
+          style={styles.input}
+          placeholder="Enter Phone"
+          value={phone}
+          onChangeText={setPhone}
           keyboardType="phone-pad"
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
+        {/* showing backend / validation errors here */}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {/* success message after user is added */}
+        {success ? <Text style={styles.successText}>{success}</Text> : null}
+
+        <TouchableOpacity
+          style={styles.button}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
@@ -108,13 +124,12 @@ export default function AddUserScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.secondaryButton} 
-          onPress={() => router.push('/list' as any)}
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => router.push('/list')}
         >
           <Text style={styles.secondaryButtonText}>View User List</Text>
         </TouchableOpacity>
-
       </View>
     </SafeAreaView>
   );
@@ -123,29 +138,44 @@ export default function AddUserScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   content: { padding: 20, marginTop: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
-  label: { fontSize: 16, marginBottom: 5, fontWeight: '500' },
-  input: { 
-    borderWidth: 1, 
-    borderColor: '#ccc', 
-    borderRadius: 8, 
-    padding: 12, 
-    marginBottom: 15, 
-    fontSize: 16 
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  button: { 
-    backgroundColor: '#007AFF', 
-    padding: 15, 
-    borderRadius: 8, 
-    alignItems: 'center' 
+  label: { fontSize: 16, marginBottom: 5, fontWeight: '500' },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  successText: {
+    color: 'green',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
-  secondaryButton: { 
-    marginTop: 20, 
-    backgroundColor: '#34C759', 
-    padding: 15, 
-    borderRadius: 8, 
-    alignItems: 'center' 
+  secondaryButton: {
+    marginTop: 20,
+    backgroundColor: '#34C759',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
   },
   secondaryButtonText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
